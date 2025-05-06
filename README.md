@@ -26,3 +26,9 @@ cmake --build .
    - Можно передать `--help` если что.
 
 - ``test_comp`` - запускает тесты.
+
+### Пример запуска
+
+```bash
+./comp --input test_file.txt
+```
