@@ -2,8 +2,8 @@
 
 TEST(random_test, test1) {
   using club::User;
-  club::ClientRepository cl_repo;
-  club::TableOwnerRepository tr_repo;
-  cl_repo.save_client(User("client1", 1));
-  cl_repo.save_client(User("client2", 2));
+  club::InMemoryClientRepository cl_repo;
+  club::InMemoryTableOwnerRepository tr_repo;
+  cl_repo.save(User("client1", 1));
+  cl_repo.save(User("client2", 2));
 }

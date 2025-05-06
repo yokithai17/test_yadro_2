@@ -10,19 +10,19 @@ club::Time ComputerClub::open_time() const noexcept {
   return M_info.M_start_time_;
 }
 
-std::size_t ComputerClub::get_gain() const noexcept {
+std::size_t ComputerClub::gain() const noexcept {
   return M_info.M_gain_;
 }
 
-std::size_t ComputerClub::get_price() const noexcept {
+std::size_t ComputerClub::price() const noexcept {
   return M_info.M_price_;
 }
 
 bool ComputerClub::all_tables_working() const noexcept {
-  return M_info.M_tables_ == M_table_owner_rep_.count_occupied_tables();
+  return M_info.M_tables_ == M_table_owner_rep_->count_occupied_tables();
 }
 
-std::size_t ComputerClub::get_amount_tables() const noexcept {
+std::size_t ComputerClub::amount_tables() const noexcept {
   return M_info.M_tables_;
 }
 
@@ -31,18 +31,20 @@ ComputerClub::~ComputerClub() {
     std::cout << M_event_rep_.front() << '\n';
     M_event_rep_.pop();
   }
-
-  for (const auto& user : M_client_rep_) {
-    auto table_id = M_table_owner_rep_.get_tableId_by_userId(user.id());
-    calc_gain(table_id, close_time());
-    std::cout << club::Event{club::EventType::Left, close_time(), user.name()} << '\n';
+  auto last_users = M_client_rep_->last_users();
+  for (auto user : last_users) {
+    auto table_id = M_table_owner_rep_->get_tableId_by_userId(user.id());
+    if (table_id.has_value()) {
+      calc_gain(table_id.value(), close_time());
+      std::cout << club::Event{club::EventType::Left, close_time(), user.name()} << '\n';
+    }
   }
 
   std::cout << close_time() << '\n';
 
-  for (int table_id = 1; table_id <= M_table_rep_.size(); ++table_id) {
-    std::cout << table_id << ' ' << M_table_rep_.at(table_id).get_gain() << ' '
-              << M_table_rep_.at(table_id).get_working_time() << '\n';
+  for (int table_id = 1; table_id <= amount_tables(); ++table_id) {
+    std::cout << table_id << ' ' << M_table_rep_->get_table(table_id).get_gain() << ' '
+              << M_table_rep_->get_table(table_id).get_working_time() << '\n';
   }
 }
 
@@ -50,7 +52,7 @@ std::size_t ComputerClub::fetch_available_client_id() noexcept {
   return M_cur_client_id_++;
 }
 
-club::Event ComputerClub::handle_event(const club::Event& event) {
+void ComputerClub::handle_event(const club::Event& event) {
   using club::EventType;
   M_event_rep_.add_event(event);
   switch (event.get_type()) {
@@ -67,109 +69,115 @@ club::Event ComputerClub::handle_event(const club::Event& event) {
   }
 }
 
-club::Event ComputerClub::handle_arrived(const club::Event& event) {
+void ComputerClub::handle_arrived(const club::Event& event) {
   if (event.get_time() >= close_time() || event.get_time() < open_time()) {
     M_event_rep_.add_event({club::EventType::Error, event.get_time(), "NotOpenYet"});
-    return {club::EventType::Error, event.get_time(), "NotOpenYet"};
+    return;
   }
 
   auto user_name = event.get_args();
-  if (M_client_rep_.contains_client(user_name)) {
+  if (M_client_rep_->contains(user_name)) {
     M_event_rep_.add_event({club::EventType::Error, event.get_time(), "YouShallNotPass"});
-    return {club::EventType::Error, event.get_time(), "YouShallNotPass"};
+    return;
   }
 
   auto new_user = create_user(user_name);
-  M_client_rep_.save_client(new_user);
-
-  return {club::EventType::Success, event.get_time(), ""};
+  M_client_rep_->save(new_user);
 }
 
-club::Event ComputerClub::handle_sat(const club::Event& event) {
+void ComputerClub::handle_sat(const club::Event& event) {
   auto args = club::split(event.get_args());
   auto& client_name = args.at(0);
   std::size_t table_id = std::stoul(args.at(1));
 
-  if (!M_client_rep_.contains_client(client_name)) {
+  if (!M_client_rep_->contains(client_name)) {
     M_event_rep_.add_event({club::EventType::Error, event.get_time(), "ClientUnknown"});
-    return {club::EventType::Error, event.get_time(), "ClientUnknown"};
+    return;
   }
 
-  std::size_t user_id = M_client_rep_.get_client_id(client_name);
+  auto op_user_id = M_client_rep_->find_id(client_name);
+  if (!op_user_id.has_value()) {
+    return;
+  }
 
   if (all_tables_working()) {
     M_event_rep_.add_event({club::EventType::Error, event.get_time(), "PlaceIsBusy"});
-    return {club::EventType::Error, event.get_time(), "PlaceIsBusy"};
+    return;
   }
 
-  if (auto p = M_table_owner_rep_.is_table_owned(table_id); p.first && p.second == user_id) {
+  if (auto p = M_table_owner_rep_->table_owned(table_id); p.first && p.second == op_user_id.value()) {
     M_event_rep_.add_event({club::EventType::Error, event.get_time(), "PlaceIsBusy"});
-    return {club::EventType::Error, event.get_time(), "PlaceIsBusy"};
+    return;
   } else if (p.first) {
-    M_table_owner_rep_.free_table(table_id);
+    M_table_owner_rep_->free(table_id);
   }
 
-  assign_table(table_id, user_id, event.get_time());
-
-  return {club::EventType::Success, event.get_time(), event.get_args()};
+  assign_table(table_id, op_user_id.value(), event.get_time());
 }
 
-club::Event ComputerClub::handle_waiting(const club::Event& event) {
+void ComputerClub::handle_waiting(const club::Event& event) {
   if (!all_tables_working()) {
     M_event_rep_.add_event({club::EventType::Error, event.get_time(), "ICanWaitNoLonger!"});
-    return {club::EventType::Error, event.get_time(), "ICanWaitNoLonger!"};
+    return;
   }
 
   auto user_name = event.get_args();
-  if (M_waiting_queue_.size() == get_amount_tables()) {
+  if (M_waiting_queue_.size() == amount_tables()) {
     M_event_rep_.add_event({club::EventType::Waiting_Left, event.get_time(), user_name});
-    return {club::EventType::Waiting_Left, event.get_time(), user_name};
+    return;
   }
 
   std::size_t user_id;
-  if (auto it = M_client_rep_.find_client_id(user_name); it.first) {
-    user_id = it.second;
+  if (auto it = M_client_rep_->find_id(user_name); it.has_value()) {
+    user_id = it.value();
   } else {
     auto new_user = create_user(user_name);
     user_id = new_user.id();
   }
 
-  M_client_rep_.save_client(user_name);
+  M_client_rep_->save(user_name);
   M_waiting_queue_.push(user_id);
 
-  return {club::EventType::Success, event.get_time(), user_name};
+  return;
 }
 
-club::Event ComputerClub::handle_left(const club::Event& event) {
+void ComputerClub::handle_left(const club::Event& event) {
   auto user_name = event.get_args();
 
-  auto [found, user_id] = M_client_rep_.find_client_id(user_name);
-  if (!found) {
+  auto op_user_id = M_client_rep_->find_id(user_name);
+  if (!op_user_id.has_value()) {
     M_event_rep_.add_event({club::EventType::Error, event.get_time(), "ClientUnknown"});
-    return {club::EventType::Error, event.get_time(), "ClientUnknown"};
+    return;
   }
 
-  if (M_waiting_queue_.size() == get_amount_tables()) {
+  if (M_waiting_queue_.size() == amount_tables()) {
     M_event_rep_.add_event({club::EventType::Error, event.get_time(), "Waiting"});
-    return {club::EventType::Error, event.get_time(), "Waiting"};
+    return;
   }
 
-  auto table_id = M_table_owner_rep_.get_tableId_by_userId(user_id);
-
+  auto op_table_id = M_table_owner_rep_->get_tableId_by_userId(op_user_id.value());
+  if (!op_table_id.has_value()) {
+    M_event_rep_.add_event({club::EventType::Error, event.get_time(), "MissingTable"});
+    return;
+  }
+  auto table_id = op_table_id.value();
   // Возможно следует это вставить в конце, а тут посчитать только рабочее время
   calc_gain(table_id, event.get_time());
 
-  M_table_owner_rep_.free_table(table_id);
-  M_client_rep_.remove_client(user_name);
+  M_table_owner_rep_->free(table_id);
+  M_client_rep_->remove(user_name);
 
   if (!M_waiting_queue_.empty()) {
     auto next_user_id = M_waiting_queue_.front();
     M_waiting_queue_.pop();
     assign_table(table_id, next_user_id, event.get_time());
-    M_event_rep_.add_event({club::EventType::Sat, event.get_time(), M_client_rep_.get_name_by_id(next_user_id)});
+    auto op_next_user_name =  M_client_rep_->get_name_by_id(next_user_id);
+    if (!op_next_user_name.has_value()) {
+      M_event_rep_.add_event({club::EventType::Error, event.get_time(), "ClientMissing"});
+      return;
+    }
+    M_event_rep_.add_event({club::EventType::Sat, event.get_time(), op_next_user_name.value()});
   }
-
-  return {club::EventType::Left, event.get_time(), user_name};
 }
 
 club::User ComputerClub::create_user(const std::string& name) noexcept {
@@ -177,7 +185,7 @@ club::User ComputerClub::create_user(const std::string& name) noexcept {
 }
 
 void ComputerClub::calc_gain(std::size_t table_id, club::Time timestamp) {
-  auto sat_time = M_table_rep_.get_table_sattime(table_id);
+  auto sat_time = M_table_rep_->get_start_time(table_id);
 
   auto diff_time = timestamp - sat_time;
 
@@ -186,8 +194,8 @@ void ComputerClub::calc_gain(std::size_t table_id, club::Time timestamp) {
     paid_hours++;
   }
 
-  M_table_rep_.add_table_gain(table_id, paid_hours * get_price());
-  M_info.M_gain_ += paid_hours * get_price();
+  M_table_rep_->add_gain(table_id, paid_hours * price());
+  M_info.M_gain_ += paid_hours * price();
 
-  M_table_rep_.add_table_time(table_id, diff_time);
+  M_table_rep_->add_working_time(table_id, diff_time);
 }

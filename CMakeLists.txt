@@ -8,8 +8,7 @@ find_package(GTest REQUIRED)
 file(GLOB SOURCES ${PROJECT_SOURCE_DIR}/src/*.cpp)
 file(GLOB TEST_SRC test/*.cpp test/*.h)
 
-set(MAIN_CPP main.cpp
-        include/User.h)
+set(MAIN_CPP main.cpp)
 
 add_executable(comp
         ${MAIN_CPP}

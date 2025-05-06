@@ -1,4 +1,5 @@
 #include "Club.h"
+#include "Utils.h"
 
 #include <fstream>
 #include <sstream>
@@ -18,6 +19,23 @@ namespace {
   }
 }
 
+
+namespace club {
+// Фабрика для создания репозиториев
+struct RepositoryFactory {
+  static std::unique_ptr<IClientRepository> createClientRepository() {
+    return std::make_unique<InMemoryClientRepository>();
+  }
+
+  static std::unique_ptr<ITableOwnerRepository> createTableOwnerRepository() {
+    return std::make_unique<InMemoryTableOwnerRepository>();
+  }
+
+  static std::unique_ptr<ITableRepository> createTableRepository(std::size_t tables) {
+    return std::make_unique<InMemoryTableRepository>(tables);
+  }
+};
+} // namespace club
 
 int main(int argc, char* argv[]) {
 
@@ -57,15 +75,24 @@ int main(int argc, char* argv[]) {
   std::string t_start =  t[0];
   std::string t_end = t[1];
 
+  auto table_owner_rep = club::RepositoryFactory::createTableOwnerRepository();
+  auto client_rep = club::RepositoryFactory::createClientRepository();
+  auto table_rep = club::RepositoryFactory::createTableRepository(std::stoi(t_table));
+
 
   auto comp = ComputerClub(
-    std::stoi(t_table),std::stoi(t_price),
-    club::Time{t_start}, club::Time{t_end.substr(0, t_end.size() - 1)});
+    std::move(client_rep),
+    std::move(table_owner_rep),
+    std::move(table_rep),
+     club::Time{t_start},
+     club::Time{t_end.substr(0, t_end.size() - 1)},
+     std::stoi(t_table),
+    std::stoi(t_end));
 
 
   std::string event_token;
   while (std::getline(input_file, event_token)) {
     auto inp_ev = club::event_parse(normalize_line(event_token));
-    auto out_ev = comp.handle_event(inp_ev);
+    comp.handle_event(inp_ev);
   }
 }

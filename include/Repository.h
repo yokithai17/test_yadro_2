@@ -3,11 +3,13 @@
 #include "Event.h"
 #include "Table.h"
 #include "User.h"
+#include "IRepository.h"
 
 #include <queue>
 
 #include <set>
 #include <unordered_map>
+#include <optional>
 #include <vector>
 
 namespace club {
@@ -40,61 +42,50 @@ struct UserNameComp {
 };
 
 // Структура для хранения клиентов
-class ClientRepository {
+class InMemoryClientRepository : public IClientRepository {
 public:
   const User not_valid_client = User("", 0);
 
-  void save_client(const User& client);
+  void save(const User& client);
 
-  std::size_t get_client_id(const std::string& name) const;
+  std::optional<std::size_t> get_client_id(const std::string& name) const;
 
-  std::string get_name_by_id(std::size_t id) const;
+  std::optional<std::string> get_name_by_id(std::size_t id) const override;
 
-  std::pair<bool, std::size_t> find_client_id(const std::string& name) const;
+  std::optional<std::size_t> find_id(const std::string& name) const override;
 
-  bool contains_client(const std::string& name) const;
+  bool contains(const std::string& name) const override;
 
-  void remove_client(const std::string& name);
+  void remove(const std::string& name) override;
 
-  auto begin() {
-    return M_storage_.begin();
-  }
-
-  auto end() {
-    return M_storage_.end();
-  }
-
+  std::vector<User> last_users() const override;
 private:
   std::set<User, UserNameComp> M_storage_;
 };
 
 // Структура для хранения столов
-class TableRepository {
+class InMemoryTableRepository : public ITableRepository {
 public:
-  TableRepository(std::size_t tables)
+  InMemoryTableRepository(std::size_t tables)
       : M_storage_(tables) {}
 
-  void add_table_gain(std::size_t table_id, std::size_t gain) noexcept {
+  void add_gain(std::size_t table_id, std::size_t gain) noexcept override {
     M_storage_[table_id - 1].add_gain(gain);
   }
 
-  void add_table_time(std::size_t table_id, Time time) noexcept {
+  void add_working_time(std::size_t table_id, Time time) noexcept override {
     M_storage_[table_id - 1].add_working_time(time);
   }
 
-  void set_table_sattime(std::size_t table_id, Time time) noexcept {
+  void add_starttime(std::size_t table_id, Time time) noexcept override {
     M_storage_[table_id - 1].set_sat_time(time);
   }
 
-  Time get_table_sattime(std::size_t table_id) const noexcept {
+  Time get_start_time(std::size_t table_id) const noexcept override {
     return M_storage_[table_id - 1].get_sat_time();
   }
 
-  std::size_t size() const noexcept {
-    return M_storage_.size();
-  }
-
-  Table at(int table_id) const noexcept {
+  Table get_table(int table_id) const noexcept override {
     return M_storage_[table_id - 1];
   }
 
@@ -111,21 +102,21 @@ private:
 };
 
 // Структура для связи клиента и стола
-class TableOwnerRepository {
+class InMemoryTableOwnerRepository : public ITableOwnerRepository {
 public:
-  void assign_table(std::size_t table_id, std::size_t client_id);
+  void assign(std::size_t table_id, std::size_t client_id) override;
 
-  std::pair<bool, std::size_t> is_table_owned(std::size_t table_id) const;
+  std::pair<bool, std::size_t> table_owned(std::size_t table_id) const override;
 
-  void free_table(std::size_t table_id);
+  void free(std::size_t table_id) override;
 
-  std::size_t get_tableId_by_userId(std::size_t user_id) const;
+  std::optional<std::size_t> get_tableId_by_userId(std::size_t user_id) const override;
 
-  std::vector<std::size_t> get_all_occupied_tables() const;
+  std::vector<std::size_t> get_all_occupied_tables() const override;
 
-  std::size_t count_occupied_tables() const;
+  std::size_t count_occupied_tables() const override;
 
-  bool all_free() const;
+  bool all_free() const override;
 
 private:
   std::unordered_map<std::size_t, std::size_t> M_table_to_user_; // TableId -> UserId
