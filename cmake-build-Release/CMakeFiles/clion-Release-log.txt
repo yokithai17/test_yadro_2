@@ -1,4 +1,0 @@
-/usr/bin/cmake -DCMAKE_BUILD_TYPE=Release --preset Release -S /home/yoki/yadro/comp -B /home/yoki/yadro/comp/cmake-build-Release
--- Configuring done (0.3s)
--- Generating done (0.0s)
--- Build files have been written to: /home/yoki/yadro/comp/cmake-build-Release
