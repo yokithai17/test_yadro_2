@@ -1,4 +1,5 @@
 #include "Club.h"
+#include "RepositoryFactory.h"
 #include "Utils.h"
 
 #include <fstream>
@@ -6,36 +7,6 @@
 #include <string>
 #include <algorithm>
 
-std::string normalize_line(const std::string& line) {
-  std::string result = line;
-  result.erase(std::ranges::remove(result, '\r').begin(), result.end());
-  return result;
-}
-
-namespace {
-  std::string get_line(std::ifstream& in, std::string& line) {
-    std::getline(in, line);
-    return normalize_line(line);
-  }
-}
-
-
-namespace club {
-// Фабрика для создания репозиториев
-struct RepositoryFactory {
-  static std::unique_ptr<IClientRepository> createClientRepository() {
-    return std::make_unique<InMemoryClientRepository>();
-  }
-
-  static std::unique_ptr<ITableOwnerRepository> createTableOwnerRepository() {
-    return std::make_unique<InMemoryTableOwnerRepository>();
-  }
-
-  static std::unique_ptr<ITableRepository> createTableRepository(std::size_t tables) {
-    return std::make_unique<InMemoryTableRepository>(tables);
-  }
-};
-} // namespace club
 
 int main(int argc, char* argv[]) {
 
@@ -67,9 +38,9 @@ int main(int argc, char* argv[]) {
   }
 
   std::string t_table, t_price, t_time;
-  get_line(input_file, t_table);
-  get_line(input_file, t_time);
-  get_line(input_file, t_price);
+  club::get_line(input_file, t_table);
+  club::get_line(input_file, t_time);
+  club::get_line(input_file, t_price);
   auto t = club::split(t_time);
 
   std::string t_start =  t[0];
@@ -92,7 +63,7 @@ int main(int argc, char* argv[]) {
 
   std::string event_token;
   while (std::getline(input_file, event_token)) {
-    auto inp_ev = club::event_parse(normalize_line(event_token));
+    auto inp_ev = club::event_parse(club::normalize_line(event_token));
     comp.handle_event(inp_ev);
   }
 }

@@ -1,6 +1,8 @@
 #include "Utils.h"
 
 #include <sstream>
+#include <algorithm>
+#include <fstream>
 
 namespace club {
 
@@ -76,5 +78,15 @@ int event_type_to_id(EventType type) {
   default:
     return -1;
   }
+}
+std::string normalize_line(const std::string& line) {
+  std::string result = line;
+  result.erase(std::ranges::remove(result, '\r').begin(), result.end());
+  return result;
+}
+
+std::string get_line(std::ifstream& in, std::string& line) {
+  std::getline(in, line);
+  return normalize_line(line);
 }
 } // namespace club
