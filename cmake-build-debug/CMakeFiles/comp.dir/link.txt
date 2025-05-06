@@ -1,0 +1,1 @@
+/usr/bin/c++ -g CMakeFiles/comp.dir/main.cpp.o CMakeFiles/comp.dir/src/Club.cpp.o CMakeFiles/comp.dir/src/Event.cpp.o CMakeFiles/comp.dir/src/Repository.cpp.o CMakeFiles/comp.dir/src/Table.cpp.o CMakeFiles/comp.dir/src/Time.cpp.o CMakeFiles/comp.dir/src/User.cpp.o CMakeFiles/comp.dir/src/Utils.cpp.o -o comp 

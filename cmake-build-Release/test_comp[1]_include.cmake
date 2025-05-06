@@ -1,0 +1,5 @@
+if(EXISTS "/home/yoki/yadro/comp/cmake-build-Release/test_comp[1]_tests.cmake")
+  include("/home/yoki/yadro/comp/cmake-build-Release/test_comp[1]_tests.cmake")
+else()
+  add_test(test_comp_NOT_BUILT test_comp_NOT_BUILT)
+endif()

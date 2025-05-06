@@ -1,0 +1,4 @@
+/home/yoki/yadro/comp/build/CMakeFiles/comp.dir
+/home/yoki/yadro/comp/build/CMakeFiles/test_comp.dir
+/home/yoki/yadro/comp/build/CMakeFiles/edit_cache.dir
+/home/yoki/yadro/comp/build/CMakeFiles/rebuild_cache.dir
