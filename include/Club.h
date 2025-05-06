@@ -61,7 +61,7 @@ private:
 
   club::User create_user(const std::string& name) noexcept;
 
-  void calc_gain(std::size_t table_id, const std::string& user_name, club::Time timestamp);
+  void calc_gain(std::size_t table_id, club::Time timestamp);
 
   void assign_table(std::size_t table_id, std::size_t user_id, club::Time timestamp) noexcept {
     M_table_owner_rep_.assign_table(table_id, user_id);

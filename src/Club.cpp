@@ -34,7 +34,7 @@ ComputerClub::~ComputerClub() {
 
   for (const auto& user : M_client_rep_) {
     auto table_id = M_table_owner_rep_.get_tableId_by_userId(user.id());
-    calc_gain(table_id, user.name(), close_time());
+    calc_gain(table_id, close_time());
     std::cout << club::Event{club::EventType::Left, close_time(), user.name()} << '\n';
   }
 
@@ -157,7 +157,7 @@ club::Event ComputerClub::handle_left(const club::Event& event) {
   auto table_id = M_table_owner_rep_.get_tableId_by_userId(user_id);
 
   // Возможно следует это вставить в конце, а тут посчитать только рабочее время
-  calc_gain(table_id, user_name, event.get_time());
+  calc_gain(table_id, event.get_time());
 
   M_table_owner_rep_.free_table(table_id);
   M_client_rep_.remove_client(user_name);
@@ -176,7 +176,7 @@ club::User ComputerClub::create_user(const std::string& name) noexcept {
   return club::User{name, fetch_available_client_id()};
 }
 
-void ComputerClub::calc_gain(std::size_t table_id, const std::string& user_name, club::Time timestamp) {
+void ComputerClub::calc_gain(std::size_t table_id, club::Time timestamp) {
   auto sat_time = M_table_rep_.get_table_sattime(table_id);
 
   auto diff_time = timestamp - sat_time;

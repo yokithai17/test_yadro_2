@@ -5,3 +5,6 @@ build
 # IDE
 .idea
 .vscode
+
+# Test files
+test_file.txt
